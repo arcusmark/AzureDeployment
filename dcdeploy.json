@@ -6,7 +6,7 @@
             "type": "string"
         },
         "networkInterfaceName": {
-            "type": "string"
+            "type": "string",
             "defaultValue": "LAN",
             "metadata": {
                 "description": "Dit is een test"
