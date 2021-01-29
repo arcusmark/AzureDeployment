@@ -3,137 +3,204 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "KlantAfkorting": {
+            "type": "string"
+        },
+        "osDiskType": {
             "type": "string",
-            "maxLength":2,
-            "minLength":2,
-            "metadata": {
-                "description": "Klantnaam afkorting. Verplicht 2 characters."
-            }
-        },       
+            "defaultValue": "Premium_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Premium_LRS"
+            ],
+        },
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "arcusadmin"
+        },
         "adminPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Default Admin password"
-            }
+            "type": "secureString"
         }
     },
-    "functions": [],
     "variables": {
-        "adminUsername": "arcusadmin",
-        "nic1": "nic-1",
-        "diagStorageAccountName": "[concat('diags',uniqueString(resourceGroup().id))]",
-        "computerName": "[concat(parameters('KlantAfkorting'), '-ADDS01')]",
-        "subnetName": "prod-subnet",
-        "virtualnetworkName": "[concat(parameters('KlantAfkorting'), '-prod-vNet')]",
-        "networkSecurityGroupName": "[concat(variables('subnetName'), '-nsg')]"   
-    },
-    "resources": [
-         {
-            "name": "[variables('computerName')]",
-            "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2019-12-01",
-            "location": "[resourceGroup().location]",
-            "comments": "This is the virtual machine that you're building.",
+        "computerName": "ADDS",
+        "subnetName": "Subnet-1",
+        "virtualNetworkName": "prod-vNet",
+        "virtualMachineRG": "prod",
+        "virtualMachineSize": "Standard_B2ms",
+        "patchMode": "AutomaticByOS",
+        "virtualMachineName": "[concat(parameters('KlantAfkorting'),variables('computerName'))]",
+        "virtualMachineComputerName": "[variables('virtualMachineName')]",
+        "networkSecurityGroupName": "[concat('nsg-',variables('computerName'))]",
+        "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+        "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/', variables('subnetName'))]",
+        "location": "[resourceGroup().location]",
+        "networkInterfaceName": "LAN",
+        "networkSecurityGroupRules": {
+            "name": "RDP",
             "properties": {
-                "osProfile": {
-                    "computerName": "[variables('computerName')]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "adminPassword": "[parameters('adminPassword')]",
-                    "windowsConfiguration": {
-                        "provisionVmAgent": "true"
-                    }
-                },
-                "hardwareProfile": {
-                    "vmSize": "Standard_B2ms"
-                },
-                "storageProfile": {
-                    "imageReference": {
-                        "publisher": "MicrosoftWindowsServer",
-                        "offer": "WindowsServer",
-                        "sku": "2019-Datacenter",
-                        "version": "latest"
-                    },
-                    "osDisk": {
-                        "createOption": "FromImage"
-                    }
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "properties": {
-                                "primary": true
-                            },
-                             "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nic1'))]"
-                        }
-                    ]         
-                },
-                "diagnosticsProfile": {
-                    "bootDiagnostics": {
-                        "enabled": true,
-                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('diagStorageAccountName')), '2019-06-01').primaryEndpoints['blob']]"
-                    }
-                }
+                "priority": 300,
+                "protocol": "TCP",
+                "access": "Allow",
+                "direction": "Inbound",
+                "sourceAddressPrefix": "*",
+                "sourcePortRange": "*",
+                "destinationAddressPrefix": "*",
+                "destinationPortRange": "3389"
             }
         },
+        "subnets": {
+            "name": "default",
+            "properties": {
+                "addressPrefix": "10.0.0.0/24"
+            }
+        }
+
+
+        
+    },
+    "resources": [
         {
-            "type": "Microsoft.Storage/storageAccounts",
-            "name": "[variables('diagStorageAccountName')]",
-            "apiVersion": "2019-06-01",
-            "location": "[resourceGroup().location]",
-            "sku": {
-                "name": "Premium_LRS"
-            },
-            "kind": "StorageV2"
-        },
-        {
-            "type": "Microsoft.Network/virtualNetworks",
-            "name": "[variables('virtualnetworkName')]",
-            "apiVersion": "2020-05-01",
-            "location": "[resourceGroup().location]",
-            "comments": "This will build a Virtual Network.",
+            "name": "[variables('networkInterfaceName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2018-10-01",
+            "location": "[variables('location')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]",
+                "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
             ],
             "properties": {
-                "addressSpace": {
-                    "addressPrefixes": [
-                        "10.0.0.0/16"
-                    ]
-                },
-                "subnets": [
+                "ipConfigurations": [
                     {
-                        "name": "[variables('subnetName')]",
+                        "name": "ipconfig1",
                         "properties": {
-                            "addressPrefix": "10.0.0.0/24"
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
                         }
                     }
-                ]
+                ],
+                "networkSecurityGroup": {
+                    "id": "[variables('nsgId')]"
+                }
             }
         },
         {
             "name": "[variables('networkSecurityGroupName')]",
             "type": "Microsoft.Network/networkSecurityGroups",
-            "apiVersion": "2020-05-01",
-            "location": "[resourceGroup().location]",
-            "comments": "Network Security Group (NSG) for your Primary NIC",
+            "apiVersion": "2019-02-01",
+            "location": "[variables('location')]",
             "properties": {
-                "securityRules": [
-                    {
-                        "name": "default-allow-rdp",
-                        "properties": {
-                            "priority": 1000,
-                            "sourceAddressPrefix": "*",
-                            "protocol": "Tcp",
-                            "destinationPortRange": "3389",
-                            "access": "Allow",
-                            "direction": "Inbound",
-                            "sourcePortRange": "*",
-                            "destinationAddressPrefix": "*"
-                        }
-                    }   
-                ]
+                "securityRules": "[variables('networkSecurityGroupRules')]"
             }
+        },
+        {
+            "name": "[variables('virtualNetworkName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2019-09-01",
+            "location": "[variables('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": "[parameters('addressPrefixes')]"
+                },
+                "subnets": "[parameters('subnets')]"
+            }
+        },
+        {
+            "name": "[variables('virtualMachineName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-12-01",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', parameters('networkInterfaceName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('virtualMachineSize')]"
+                },
+                "storageProfile": {
+                    "osDisk": {
+                        "createOption": "fromImage",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('osDiskType')]"
+                        }
+                    },
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2019-Datacenter",
+                        "version": "latest"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaceName'))]"
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[variables('virtualMachineComputerName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "windowsConfiguration": {
+                        "enableAutomaticUpdates": true,
+                        "provisionVmAgent": true,
+                        "patchSettings": {
+                            "patchMode": "[variables('patchMode')]"
+                        }
+                    }
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            }
+        },
+        {
+            "name": "microsoft.antimalware-windows-20210129153854",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "https://catalogartifact.azureedge.net/publicartifactsmigration/microsoft.antimalware-windows-arm.1.0.2/Artifacts/MainTemplate.json"
+                },
+                "parameters": {
+                    "vmName": {
+                        "value": "hw-adds01"
+                    },
+                    "location": {
+                        "value": "westeurope"
+                    },
+                    "RealtimeProtectionEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsIsEnabled": {
+                        "value": "false"
+                    },
+                    "ScheduledScanSettingsScanType": {
+                        "value": "Quick"
+                    },
+                    "ScheduledScanSettingsDay": {
+                        "value": "7"
+                    },
+                    "ScheduledScanSettingsTime": {
+                        "value": "120"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('virtualMachineName'))]"
+            ]
         }
     ],
-    "outputs": {}
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        }
+    }
 }
