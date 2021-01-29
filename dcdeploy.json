@@ -9,13 +9,7 @@
             "metadata": {
                 "description": "Klantnaam afkorting. Verplicht 2 characters."
             }
-        },
-        "adminUsername": {
-            "type": "string",
-            "metadata": {
-                "description": "Default Admin username"
-            }
-        },
+        },       
         "adminPassword": {
             "type": "securestring",
             "metadata": {
@@ -25,6 +19,7 @@
     },
     "functions": [],
     "variables": {
+        "adminUsername": "arcusadmin",
         "nic1": "nic-1",
         "diagStorageAccountName": "[concat('diags',uniqueString(resourceGroup().id))]",
         "computerName": "[concat(parameters('KlantAfkorting'), '-ADDS01')]",
