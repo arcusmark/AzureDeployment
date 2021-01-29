@@ -11,7 +11,7 @@
             "allowedValues": [
                 "Standard_LRS",
                 "Premium_LRS"
-            ],
+            ]
         },
         "adminUsername": {
             "type": "string",
