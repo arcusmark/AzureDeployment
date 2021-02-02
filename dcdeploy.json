@@ -39,7 +39,8 @@
         "subnetRef": "[concat(variables('vnetId'), '/subnets/', variables('subnetName'))]",
         "location": "[resourceGroup().location]",
         "networkInterfaceName": "LAN",
-        "networkSecurityGroupRules": {
+        "networkSecurityGroupRules": [
+            {
             "name": "RDP",
             "properties": {
                 "priority": 300,
@@ -50,18 +51,18 @@
                 "sourcePortRange": "*",
                 "destinationAddressPrefix": "*",
                 "destinationPortRange": "3389"
+                }
             }
-        },
-        "subnets": {
+        ],
+        "subnets": [
+            {
             "name": "default",
             "properties": {
                 "addressPrefix": "10.0.0.0/24"
+                }
             }
-        }
-
-
-        
-    },
+        ]
+    },    
     "resources": [
         {
             "name": "[variables('networkInterfaceName')]",
