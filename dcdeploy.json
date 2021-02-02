@@ -18,7 +18,7 @@
         },
         "adminUsername": {
             "type": "string",
-            "defaultValue": "arcusadmin"
+            "defaultValue": "arcusmin"
         },
         "adminPassword": {
             "type": "secureString"
@@ -28,7 +28,6 @@
         "computerName": "ADDS",
         "subnetName": "Subnet-1",
         "virtualNetworkName": "prod-vNet",
-        "virtualMachineRG": "prod",
         "virtualMachineSize": "Standard_B2ms",
         "patchMode": "AutomaticByOS",
         "virtualMachineName": "[concat(parameters('KlantAfkorting'),variables('computerName'))]",
@@ -108,7 +107,9 @@
             "location": "[variables('location')]",
             "properties": {
                 "addressSpace": {
-                    "addressPrefixes": "10.0.0.0/24"
+                    "addressPrefixes": [
+                        "10.0.0.0/24"
+                    ]
                 },
                 "subnets": "[variables('subnets')]"
             }
