@@ -63,13 +63,7 @@
                 "addressPrefix": "10.0.0.0/24"
                 }
             }
-        ],
-        "addressPrefixes": 
-        [
-            {
-            "value": "10.0.0.0/24"
-            }
-        ],
+        ]
     },    
     "resources": [
         {
@@ -114,7 +108,7 @@
             "location": "[variables('location')]",
             "properties": {
                 "addressSpace": {
-                    "addressPrefixes": "[variables('addressPrefixes')]"
+                    "addressPrefixes": "10.0.0.0/24"
                 },
                 "subnets": "[variables('subnets')]"
             }
